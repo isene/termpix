@@ -6,6 +6,8 @@
 
 Display images in the terminal using the best available protocol.
 
+<br clear="left"/>
+
 ## Features
 
 - Auto-detects terminal capabilities
