@@ -2,9 +2,7 @@
 
 ![Ruby](https://img.shields.io/badge/language-Ruby-red) [![Gem Version](https://badge.fury.io/rb/termpix.svg)](https://badge.fury.io/rb/termpix) ![Unlicense](https://img.shields.io/badge/license-Unlicense-green) ![Stay Amazing](https://img.shields.io/badge/Stay-Amazing-important)
 
-<p align="center">
-  <img src="img/logo.svg" width="200" alt="Termpix Logo">
-</p>
+<img src="img/logo.svg" align="left" width="150" alt="Termpix Logo">
 
 Display images in the terminal using the best available protocol.
 
