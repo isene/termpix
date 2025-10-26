@@ -1,24 +1,24 @@
 require 'shellwords'
+require 'base64'
 
 module Termpix
   module Protocols
     # Kitty Graphics Protocol
     module Kitty
       def self.display(image_path, x:, y:, max_width:, max_height:)
-        dimensions = get_dimensions(image_path)
-        return unless dimensions
+        # Read image and encode to base64
+        image_data = Base64.strict_encode64(File.read(image_path))
 
-        img_w, img_h = dimensions
-        img_w, img_h = scale_dimensions(img_w, img_h, max_width, max_height)
-
-        # Position cursor and display image
-        print "\e[#{y};#{x}H"
-        # Transmit image using Kitty protocol
-        print "\e_Gf=100,a=T,t=f,c=#{img_w},r=#{img_h};#{[File.read(image_path)].pack('m0')}\e\\"
+        # Use virtual placement (no cursor positioning - avoids curses conflicts)
+        # Transmit image without positioning, let it flow inline
+        $stdout.write "\e_Ga=T,f=100,q=2;#{image_data}\e\\"
+        $stdout.flush
       end
 
       def self.clear
-        print "\e_Ga=d\e\\"
+        # Delete all Kitty images
+        $stdout.write "\e_Ga=d,d=A\e\\"
+        $stdout.flush
       end
 
       private
@@ -45,14 +45,22 @@ module Termpix
       def self.display(image_path, x:, y:, max_width:, max_height:)
         escaped = Shellwords.escape(image_path)
 
-        # Position cursor
+        # Convert character dimensions to approximate pixel dimensions
+        # Average character cell is roughly 10x20 pixels in most terminals
+        pixel_width = max_width * 10
+        pixel_height = max_height * 20
+
+        # Position cursor at the specified character position
         print "\e[#{y};#{x}H"
-        # Convert to sixel and display
-        system("convert #{escaped} -resize #{max_width}x#{max_height} sixel:- 2>/dev/null")
+        # Convert to sixel and display with proper pixel dimensions
+        system("convert #{escaped} -resize #{pixel_width}x#{pixel_height} sixel:- 2>/dev/null")
       end
 
       def self.clear
-        print "\e[2J"
+        # Sixel images are inline - they don't need explicit clearing
+        # The terminal will handle this when content is redrawn
+        # Don't use \e[2J as that clears the entire screen including curses content!
+        true
       end
     end
 
@@ -131,20 +139,27 @@ module Termpix
 3;' | #{@imgdisplay} 2>/dev/null`
       end
 
-      def self.clear
-        system('clear')
+      def self.clear(x:, y:, width:, height:, term_width:, term_height:)
+        # Clear only the image overlay in the specified area
         terminfo = `xwininfo -id $(xdotool getactivewindow 2>/dev/null) 2>/dev/null`
-        return unless terminfo && !terminfo.empty?
+        return true unless terminfo && !terminfo.empty?
 
         term_w = terminfo.match(/Width: (\d+)/)[1].to_i
         term_h = terminfo.match(/Height: (\d+)/)[1].to_i
-        cols = `tput cols`.to_i
-        lines = `tput lines`.to_i
-        char_w = term_w / cols
-        char_h = term_h / lines
 
-        # Clear the image area
-        `echo "6;0;0;#{term_w};#{term_h};\n4;\n3;" | #{@imgdisplay} 2>/dev/null`
+        # Calculate character dimensions
+        char_w = term_w / term_width
+        char_h = term_h / term_height
+
+        # Convert to pixel coordinates with slight margin adjustment
+        img_x = (char_w * x) - char_w
+        img_y = char_h * y
+        img_max_w = (char_w * width) + char_w + 2
+        img_max_h = char_h * height + 2
+
+        # Use w3mimgdisplay command "6" to clear just the image area
+        `echo "6;#{img_x};#{img_y};#{img_max_w};#{img_max_h};\n4;\n3;" | #{@imgdisplay} 2>/dev/null`
+        true
       end
     end
   end

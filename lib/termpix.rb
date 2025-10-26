@@ -38,7 +38,7 @@ module Termpix
     end
 
     # Clear the currently displayed image
-    def clear
+    def clear(x: 0, y: 0, width: 80, height: 24, term_width: 80, term_height: 24)
       return false unless @protocol
 
       case @protocol
@@ -49,7 +49,7 @@ module Termpix
       when :ueberzug
         Protocols::Ueberzug.clear
       when :w3m
-        Protocols::W3m.clear
+        Protocols::W3m.clear(x: x, y: y, width: width, height: height, term_width: term_width, term_height: term_height)
       end
 
       @current_image = nil
@@ -73,26 +73,28 @@ module Termpix
     private
 
     def detect_protocol
-      # Check for Kitty graphics protocol
-      if ENV['TERM']&.include?('kitty') ||
-         ENV['TERM_PROGRAM'] == 'WezTerm' ||
-         ENV['TERM_PROGRAM'] == 'Ghostty'
-        return :kitty if check_dependency('identify')
-      end
-
-      # Check for Sixel support
-      if ENV['TERM']&.match(/xterm|mlterm|foot/) || command_exists?('img2sixel')
+      # Check for Sixel support first - works better with curses apps
+      # Note: urxvt/rxvt-unicode does NOT support sixel unless specially compiled
+      # Kitty's sixel support doesn't work properly (shows ASCII) - use w3m instead
+      if ENV['TERM']&.match(/^xterm(?!-kitty)|^mlterm|^foot/)
         return :sixel if check_dependency('convert')
       end
 
-      # Check for Überzug++
-      if command_exists?('ueberzug') || command_exists?('ueberzugpp')
-        if check_dependencies('xwininfo', 'xdotool', 'identify')
-          return :ueberzug
-        end
-      end
+      # Kitty graphics protocol disabled - incompatible with curses apps
+      # Kitty protocol needs full terminal control, conflicts with curses rendering
+      # Users can choose between:
+      # 1. Enable w3m for Kitty (has brief flash) - set TERMPIX_KITTY_USE_W3M=1
+      # 2. No images in Kitty (clean UI)
 
-      # Fall back to w3m
+      # Überzug++ - disabled for now (implementation incomplete)
+      # TODO: Implement proper Überzug++ JSON-RPC communication
+      # if command_exists?('ueberzug') || command_exists?('ueberzugpp')
+      #   if check_dependencies('xwininfo', 'xdotool', 'identify')
+      #     return :ueberzug
+      #   end
+      # end
+
+      # Fall back to w3m (works everywhere but has brief flash in Kitty)
       if command_exists?('/usr/lib/w3m/w3mimgdisplay')
         if check_dependencies('xwininfo', 'xdotool', 'identify')
           return :w3m
