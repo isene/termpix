@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#1a1a1a" rx="20"/>
+
+  <!-- Terminal window frame -->
+  <rect x="20" y="40" width="160" height="140" fill="#2d2d2d" rx="8"/>
+
+  <!-- Terminal header bar -->
+  <rect x="20" y="40" width="160" height="24" fill="#3d3d3d" rx="8"/>
+  <rect x="20" y="52" width="160" height="12" fill="#3d3d3d"/>
+
+  <!-- Traffic light buttons -->
+  <circle cx="35" cy="52" r="4" fill="#ff5f56"/>
+  <circle cx="48" cy="52" r="4" fill="#ffbd2e"/>
+  <circle cx="61" cy="52" r="4" fill="#27c93f"/>
+
+  <!-- Terminal prompt -->
+  <text x="30" y="82" font-family="monospace" font-size="12" fill="#4CAF50">$</text>
+  <text x="42" y="82" font-family="monospace" font-size="12" fill="#aaa">termpix</text>
+
+  <!-- Pixelated image representation (colorful grid) -->
+  <g transform="translate(45, 95)">
+    <!-- Row 1 with subtle pulse animations -->
+    <rect x="0" y="0" width="12" height="12" fill="#FF6B6B" rx="1">
+      <animate attributeName="opacity" values="1;0.85;1" dur="3s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="14" y="0" width="12" height="12" fill="#4ECDC4" rx="1">
+      <animate attributeName="opacity" values="1;0.8;1" dur="3.5s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="28" y="0" width="12" height="12" fill="#45B7D1" rx="1">
+      <animate attributeName="opacity" values="1;0.9;1" dur="4s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="42" y="0" width="12" height="12" fill="#FFA07A" rx="1">
+      <animate attributeName="opacity" values="1;0.85;1" dur="3.2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="56" y="0" width="12" height="12" fill="#98D8C8" rx="1">
+      <animate attributeName="opacity" values="1;0.88;1" dur="3.8s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="70" y="0" width="12" height="12" fill="#F7DC6F" rx="1">
+      <animate attributeName="opacity" values="1;0.82;1" dur="3.3s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="84" y="0" width="12" height="12" fill="#BB8FCE" rx="1">
+      <animate attributeName="opacity" values="1;0.87;1" dur="3.6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="98" y="0" width="12" height="12" fill="#85C1E2" rx="1">
+      <animate attributeName="opacity" values="1;0.84;1" dur="3.4s" repeatCount="indefinite"/>
+    </rect>
+
+    <!-- Row 2 -->
+    <rect x="0" y="14" width="12" height="12" fill="#4ECDC4" rx="1"/>
+    <rect x="14" y="14" width="12" height="12" fill="#FF6B6B" rx="1"/>
+    <rect x="28" y="14" width="12" height="12" fill="#98D8C8" rx="1"/>
+    <rect x="42" y="14" width="12" height="12" fill="#45B7D1" rx="1"/>
+    <rect x="56" y="14" width="12" height="12" fill="#F7DC6F" rx="1"/>
+    <rect x="70" y="14" width="12" height="12" fill="#FFA07A" rx="1"/>
+    <rect x="84" y="14" width="12" height="12" fill="#85C1E2" rx="1"/>
+    <rect x="98" y="14" width="12" height="12" fill="#BB8FCE" rx="1"/>
+
+    <!-- Row 3 -->
+    <rect x="0" y="28" width="12" height="12" fill="#45B7D1" rx="1"/>
+    <rect x="14" y="28" width="12" height="12" fill="#98D8C8" rx="1"/>
+    <rect x="28" y="28" width="12" height="12" fill="#FF6B6B" rx="1"/>
+    <rect x="42" y="28" width="12" height="12" fill="#BB8FCE" rx="1"/>
+    <rect x="56" y="28" width="12" height="12" fill="#4ECDC4" rx="1"/>
+    <rect x="70" y="28" width="12" height="12" fill="#85C1E2" rx="1"/>
+    <rect x="84" y="28" width="12" height="12" fill="#FFA07A" rx="1"/>
+    <rect x="98" y="28" width="12" height="12" fill="#F7DC6F" rx="1"/>
+
+    <!-- Row 4 -->
+    <rect x="0" y="42" width="12" height="12" fill="#98D8C8" rx="1"/>
+    <rect x="14" y="42" width="12" height="12" fill="#45B7D1" rx="1"/>
+    <rect x="28" y="42" width="12" height="12" fill="#BB8FCE" rx="1"/>
+    <rect x="42" y="42" width="12" height="12" fill="#FF6B6B" rx="1"/>
+    <rect x="56" y="42" width="12" height="12" fill="#85C1E2" rx="1"/>
+    <rect x="70" y="42" width="12" height="12" fill="#4ECDC4" rx="1"/>
+    <rect x="84" y="42" width="12" height="12" fill="#F7DC6F" rx="1"/>
+    <rect x="98" y="42" width="12" height="12" fill="#FFA07A" rx="1"/>
+  </g>
+
+  <!-- Cursor blink with animation -->
+  <rect x="100" y="72" width="8" height="14" fill="#4CAF50">
+    <animate attributeName="opacity" values="0.9;0.2;0.9" dur="1.2s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Subtle glow effect on traffic lights -->
+  <circle cx="35" cy="52" r="5" fill="#ff5f56" opacity="0.3">
+    <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="48" cy="52" r="5" fill="#ffbd2e" opacity="0.3">
+    <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2.3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="61" cy="52" r="5" fill="#27c93f" opacity="0.3">
+    <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2.6s" repeatCount="indefinite"/>
+  </circle>
+</svg>
