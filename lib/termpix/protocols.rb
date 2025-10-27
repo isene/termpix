@@ -4,21 +4,19 @@ require 'base64'
 module Termpix
   module Protocols
     # Kitty Graphics Protocol
+    # After extensive testing: Kitty protocol fundamentally incompatible with curses
+    # The protocol requires precise cursor control that conflicts with curses' buffer
+    # management. Recommend disabling Kitty protocol for curses-based apps.
     module Kitty
       def self.display(image_path, x:, y:, max_width:, max_height:)
-        # Read image and encode to base64
-        image_data = Base64.strict_encode64(File.read(image_path))
-
-        # Use virtual placement (no cursor positioning - avoids curses conflicts)
-        # Transmit image without positioning, let it flow inline
-        $stdout.write "\e_Ga=T,f=100,q=2;#{image_data}\e\\"
-        $stdout.flush
+        # Kitty graphics protocol does not work reliably with curses applications
+        # The fundamental issue is that both Kitty and curses need exclusive control
+        # of terminal state, causing unavoidable conflicts
+        false
       end
 
       def self.clear
-        # Delete all Kitty images
-        $stdout.write "\e_Ga=d,d=A\e\\"
-        $stdout.flush
+        true
       end
 
       private
@@ -52,8 +50,9 @@ module Termpix
 
         # Position cursor at the specified character position
         print "\e[#{y};#{x}H"
-        # Convert to sixel and display with proper pixel dimensions
-        system("convert #{escaped} -resize #{pixel_width}x#{pixel_height} sixel:- 2>/dev/null")
+        # Use > to only shrink, never enlarge, preserving aspect ratio
+        # ImageMagick will fit image within box while maintaining aspect ratio
+        system("convert #{escaped} -resize #{pixel_width}x#{pixel_height}\\> sixel:- 2>/dev/null")
       end
 
       def self.clear
@@ -117,14 +116,20 @@ module Termpix
         img_max_w = char_w * max_width
         img_max_h = char_h * max_height
 
-        # Get image dimensions
+        # Handle EXIF orientation by creating auto-oriented temp file
         escaped = Shellwords.escape(image_path)
-        dimensions = `identify -format "%wx%h" #{escaped}[0] 2>/dev/null`.strip
+        temp_file = "/tmp/termpix_#{Process.pid}.jpg"
+
+        # Auto-orient image to respect EXIF rotation, then get dimensions
+        system("convert #{escaped}[0] -auto-orient #{temp_file} 2>/dev/null")
+        display_path = File.exist?(temp_file) ? temp_file : image_path
+
+        dimensions = `identify -format "%wx%h" #{Shellwords.escape(display_path)} 2>/dev/null`.strip
         return if dimensions.empty?
 
         img_w, img_h = dimensions.split('x').map(&:to_i)
 
-        # Scale if needed
+        # Scale if needed - preserve aspect ratio
         if img_w > img_max_w || img_h > img_max_h
           scale_w = img_max_w.to_f / img_w
           scale_h = img_max_h.to_f / img_h
@@ -134,9 +139,12 @@ module Termpix
         end
 
         # Display using w3mimgdisplay protocol
-        `echo '0;1;#{img_x};#{img_y};#{img_w};#{img_h};;;;;#{image_path}
+        `echo '0;1;#{img_x};#{img_y};#{img_w};#{img_h};;;;;#{display_path}
 4;
 3;' | #{@imgdisplay} 2>/dev/null`
+
+        # Clean up temp file
+        File.delete(temp_file) if File.exist?(temp_file) && temp_file != image_path
       end
 
       def self.clear(x:, y:, width:, height:, term_width:, term_height:)

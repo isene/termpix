@@ -80,11 +80,9 @@ module Termpix
         return :sixel if check_dependency('convert')
       end
 
-      # Kitty graphics protocol disabled - incompatible with curses apps
-      # Kitty protocol needs full terminal control, conflicts with curses rendering
-      # Users can choose between:
-      # 1. Enable w3m for Kitty (has brief flash) - set TERMPIX_KITTY_USE_W3M=1
-      # 2. No images in Kitty (clean UI)
+      # Kitty graphics protocol disabled - fundamentally incompatible with curses
+      # After extensive testing: Kitty protocol requires exclusive terminal control
+      # that conflicts with curses' buffer management. Use w3m fallback instead.
 
       # Überzug++ - disabled for now (implementation incomplete)
       # TODO: Implement proper Überzug++ JSON-RPC communication
