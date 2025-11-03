@@ -116,13 +116,28 @@ module Termpix
         img_max_w = char_w * max_width
         img_max_h = char_h * max_height
 
-        # Handle EXIF orientation by creating auto-oriented temp file
+        # Check if image has EXIF orientation data before auto-orienting
+        # This avoids unnecessary temp file creation for most images
         escaped = Shellwords.escape(image_path)
-        temp_file = "/tmp/termpix_#{Process.pid}.jpg"
 
-        # Auto-orient image to respect EXIF rotation, then get dimensions
-        system("convert #{escaped}[0] -auto-orient #{temp_file} 2>/dev/null")
-        display_path = File.exist?(temp_file) ? temp_file : image_path
+        # Quick check: only auto-orient if image has EXIF orientation tag
+        has_orientation = `identify -format "%[EXIF:Orientation]" #{escaped}[0] 2>/dev/null`.strip
+
+        if has_orientation && !has_orientation.empty? && has_orientation != "1"
+          # Image needs rotation - create cached temp file
+          require 'digest'
+          file_hash = Digest::MD5.hexdigest(image_path)
+          temp_file = "/tmp/termpix_#{file_hash}.jpg"
+
+          unless File.exist?(temp_file)
+            system("convert #{escaped}[0] -auto-orient #{temp_file} 2>/dev/null")
+          end
+
+          display_path = File.exist?(temp_file) ? temp_file : image_path
+        else
+          # No rotation needed - use original image
+          display_path = image_path
+        end
 
         dimensions = `identify -format "%wx%h" #{Shellwords.escape(display_path)} 2>/dev/null`.strip
         return if dimensions.empty?
@@ -143,8 +158,7 @@ module Termpix
 4;
 3;' | #{@imgdisplay} 2>/dev/null`
 
-        # Clean up temp file
-        File.delete(temp_file) if File.exist?(temp_file) && temp_file != image_path
+        # Don't delete temp file - keep it cached for performance
       end
 
       def self.clear(x:, y:, width:, height:, term_width:, term_height:)

@@ -5,6 +5,18 @@ All notable changes to Termpix will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-10-27
+
+### Performance
+- Conditional auto-orient: Only auto-orients images that have EXIF orientation metadata
+- Checks EXIF:Orientation tag before creating temp files
+- Most images skip auto-orient entirely (much faster first display)
+- Cached temp files for images that need rotation
+
+### Improved
+- Significantly faster first-time display for images without EXIF rotation data
+- Reduced unnecessary ImageMagick conversions
+
 ## [0.2.0] - 2025-10-27
 
 ### Added
