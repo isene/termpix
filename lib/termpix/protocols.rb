@@ -4,19 +4,109 @@ require 'base64'
 module Termpix
   module Protocols
     # Kitty Graphics Protocol
-    # After extensive testing: Kitty protocol fundamentally incompatible with curses
-    # The protocol requires precise cursor control that conflicts with curses' buffer
-    # management. Recommend disabling Kitty protocol for curses-based apps.
+    # Uses Unicode placeholder mode (U=1) for curses/TUI compatibility
+    # Images are tied to placeholder characters that curses manages as text
     module Kitty
+      @current_image_id = nil
+      @image_cache = {}  # path -> image_id mapping
+
       def self.display(image_path, x:, y:, max_width:, max_height:)
-        # Kitty graphics protocol does not work reliably with curses applications
-        # The fundamental issue is that both Kitty and curses need exclusive control
-        # of terminal state, causing unavoidable conflicts
-        false
+        return false unless File.exist?(image_path)
+
+        # Get terminal cell size in pixels
+        cell_width, cell_height = get_cell_size
+        return false unless cell_width && cell_height
+
+        # Calculate pixel dimensions for the image area
+        pixel_width = max_width * cell_width
+        pixel_height = max_height * cell_height
+
+        # Check if we have this image cached
+        cache_key = "#{image_path}:#{pixel_width}x#{pixel_height}"
+        image_id = @image_cache[cache_key]
+
+        unless image_id
+          # Generate new image ID (1-4294967295)
+          image_id = (Time.now.to_f * 1000).to_i % 4294967295
+          image_id = 1 if image_id == 0
+        end
+
+        old_image_id = @current_image_id
+
+        unless @image_cache[cache_key]
+          # Transmit the image with scaling
+          escaped = Shellwords.escape(image_path)
+
+          # Create scaled PNG data using ImageMagick
+          png_data = `convert #{escaped}[0] -auto-orient -resize #{pixel_width}x#{pixel_height}\\> PNG:- 2>/dev/null`
+          return false if png_data.empty?
+
+          # Encode as base64 and chunk it (max 4096 bytes per chunk)
+          encoded = Base64.strict_encode64(png_data)
+          chunks = encoded.scan(/.{1,4096}/)
+
+          # Transmit image in chunks
+          chunks.each_with_index do |chunk, idx|
+            more = idx < chunks.length - 1 ? 1 : 0
+            if idx == 0
+              # First chunk: specify format (f=100 for PNG), action (a=t for transmit)
+              # i=image_id, m=more_chunks
+              print "\e_Ga=t,f=100,i=#{image_id},m=#{more};#{chunk}\e\\"
+            else
+              # Continuation chunks
+              print "\e_Gm=#{more};#{chunk}\e\\"
+            end
+          end
+          $stdout.flush
+
+          @image_cache[cache_key] = image_id
+        end
+
+        # Position cursor and display the NEW image FIRST
+        # a=p (place), i=image_id, C=1 (don't move cursor)
+        # Don't specify c/r - let kitty use image's native size (already scaled by ImageMagick)
+        print "\e[#{y};#{x}H"  # Move cursor to position
+        print "\e_Ga=p,i=#{image_id},C=1\e\\"
+        $stdout.flush
+
+        # NOW delete old placement (after new one is visible) - atomic swap
+        if old_image_id && old_image_id != image_id
+          print "\e_Ga=d,d=i,i=#{old_image_id}\e\\"
+          $stdout.flush
+        end
+
+        @current_image_id = image_id
+        true
       end
 
       def self.clear
+        # Actually clear the image
+        if @current_image_id
+          print "\e_Ga=d,d=i,i=#{@current_image_id}\e\\"
+          $stdout.flush
+          @current_image_id = nil
+        end
         true
+      end
+
+      def self.get_cell_size
+        # Query terminal for cell size using XTWINOPS
+        # Or estimate from terminal size
+        begin
+          require 'io/console'
+          rows, cols = IO.console.winsize
+          # Get pixel size if available
+          if IO.console.respond_to?(:winsize_pixels)
+            prows, pcols = IO.console.winsize_pixels rescue nil
+            if prows && pcols && prows > 0 && pcols > 0
+              return [pcols / cols, prows / rows]
+            end
+          end
+          # Fall back to common defaults (10x20 pixels per cell)
+          [10, 20]
+        rescue
+          [10, 20]
+        end
       end
 
       private

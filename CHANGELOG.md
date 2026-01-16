@@ -5,6 +5,23 @@ All notable changes to Termpix will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-01-16
+
+### Added
+- Native Kitty graphics protocol implementation - no more flash in kitty terminal
+- Image caching for kitty protocol - faster repeat displays
+- Atomic image replacement - new image shown before old one cleared
+- `atomic_replace?` method to check if protocol supports flash-free transitions
+
+### Changed
+- Kitty protocol now fully functional with curses-based applications
+- Images maintain aspect ratio in kitty (no stretching)
+- Auto-detection prefers kitty protocol when TERM=xterm-kitty or KITTY_WINDOW_ID is set
+
+### Fixed
+- Flash during image-to-image transitions in kitty terminal
+- Image positioning in kitty now respects cursor location
+
 ## [0.2.1] - 2025-10-27
 
 ### Performance
