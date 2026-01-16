@@ -61,6 +61,12 @@ module Termpix
       !@protocol.nil?
     end
 
+    # Check if protocol supports atomic replace (show new without clearing first)
+    # Kitty can replace images without flash; w3m/sixel need explicit clear
+    def atomic_replace?
+      @protocol == :kitty
+    end
+
     # Get information about the current protocol
     def info
       {
@@ -73,16 +79,16 @@ module Termpix
     private
 
     def detect_protocol
-      # Check for Sixel support first - works better with curses apps
+      # Check for Kitty terminal first - use native kitty protocol
+      if ENV['TERM'] == 'xterm-kitty' || ENV['KITTY_WINDOW_ID']
+        return :kitty if check_dependency('convert')
+      end
+
+      # Check for Sixel support - works well with curses apps
       # Note: urxvt/rxvt-unicode does NOT support sixel unless specially compiled
-      # Kitty's sixel support doesn't work properly (shows ASCII) - use w3m instead
       if ENV['TERM']&.match(/^xterm(?!-kitty)|^mlterm|^foot/)
         return :sixel if check_dependency('convert')
       end
-
-      # Kitty graphics protocol disabled - fundamentally incompatible with curses
-      # After extensive testing: Kitty protocol requires exclusive terminal control
-      # that conflicts with curses' buffer management. Use w3m fallback instead.
 
       # Überzug++ - disabled for now (implementation incomplete)
       # TODO: Implement proper Überzug++ JSON-RPC communication
@@ -92,7 +98,7 @@ module Termpix
       #   end
       # end
 
-      # Fall back to w3m (works everywhere but has brief flash in Kitty)
+      # Fall back to w3m (works on urxvt, xterm, etc.)
       if command_exists?('/usr/lib/w3m/w3mimgdisplay')
         if check_dependencies('xwininfo', 'xdotool', 'identify')
           return :w3m
