@@ -84,6 +84,11 @@ module Termpix
         return :kitty if check_dependency('convert')
       end
 
+      # Check for WezTerm - supports Kitty graphics protocol
+      if ENV['TERM_PROGRAM'] == 'WezTerm' || ENV['WEZTERM_EXECUTABLE']
+        return :kitty if check_dependency('convert')
+      end
+
       # Check for Sixel support - works well with curses apps
       # Note: urxvt/rxvt-unicode does NOT support sixel unless specially compiled
       if ENV['TERM']&.match(/^xterm(?!-kitty)|^mlterm|^foot/)
