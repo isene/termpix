@@ -21,8 +21,9 @@ module Termpix
         pixel_width = max_width * cell_width
         pixel_height = max_height * cell_height
 
-        # Check if we have this image cached
-        cache_key = "#{image_path}:#{pixel_width}x#{pixel_height}"
+        # Check if we have this image cached (include mtime to detect overwrites)
+        mtime = File.mtime(image_path).to_i rescue 0
+        cache_key = "#{image_path}:#{pixel_width}x#{pixel_height}:#{mtime}"
         image_id = @image_cache[cache_key]
 
         unless image_id
