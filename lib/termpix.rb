@@ -25,8 +25,6 @@ module Termpix
         Protocols::Kitty.display(image_path, x: x, y: y, max_width: max_width, max_height: max_height)
       when :sixel
         Protocols::Sixel.display(image_path, x: x, y: y, max_width: max_width, max_height: max_height)
-      when :ueberzug
-        Protocols::Ueberzug.display(image_path, x: x, y: y, max_width: max_width, max_height: max_height)
       when :w3m
         Protocols::W3m.display(image_path, x: x, y: y, max_width: max_width, max_height: max_height)
       else
@@ -46,8 +44,6 @@ module Termpix
         Protocols::Kitty.clear
       when :sixel
         Protocols::Sixel.clear
-      when :ueberzug
-        Protocols::Ueberzug.clear
       when :w3m
         Protocols::W3m.clear(x: x, y: y, width: width, height: height, term_width: term_width, term_height: term_height)
       end
@@ -94,14 +90,6 @@ module Termpix
       if ENV['TERM']&.match(/^xterm(?!-kitty)|^mlterm|^foot/)
         return :sixel if check_dependency('convert')
       end
-
-      # Überzug++ - disabled for now (implementation incomplete)
-      # TODO: Implement proper Überzug++ JSON-RPC communication
-      # if command_exists?('ueberzug') || command_exists?('ueberzugpp')
-      #   if check_dependencies('xwininfo', 'xdotool', 'identify')
-      #     return :ueberzug
-      #   end
-      # end
 
       # Fall back to w3m (works on urxvt, xterm, etc.)
       if command_exists?('/usr/lib/w3m/w3mimgdisplay')

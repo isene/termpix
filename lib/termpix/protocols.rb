@@ -105,7 +105,7 @@ module Termpix
           end
           # Fall back to common defaults (10x20 pixels per cell)
           [10, 20]
-        rescue
+        rescue LoadError, IOError, StandardError
           [10, 20]
         end
       end
@@ -115,7 +115,7 @@ module Termpix
       def self.get_dimensions(image_path)
         escaped = Shellwords.escape(image_path)
         dimensions = `identify -format "%wx%h" #{escaped}[0] 2>/dev/null`.strip
-        return nil if dimensions.empty?
+        return nil if dimensions.empty? || !dimensions.match?(/\A\d+x\d+\z/)
         dimensions.split('x').map(&:to_i)
       end
 
@@ -154,35 +154,6 @@ module Termpix
       end
     end
 
-    # Überzug++ Protocol
-    module Ueberzug
-      def self.display(image_path, x:, y:, max_width:, max_height:)
-        # Get terminal pixel dimensions
-        terminfo = `xwininfo -id $(xdotool getactivewindow 2>/dev/null) 2>/dev/null`
-        return unless terminfo && !terminfo.empty?
-
-        term_w = terminfo.match(/Width: (\d+)/)[1].to_i
-        term_h = terminfo.match(/Height: (\d+)/)[1].to_i
-
-        # Calculate character dimensions
-        char_w = term_w / `tput cols`.to_i
-        char_h = term_h / `tput lines`.to_i
-
-        # Convert character positions to pixels
-        img_x = char_w * x
-        img_y = char_h * y
-        img_w = char_w * max_width
-        img_h = char_h * max_height
-
-        # TODO: Implement actual Überzug++ protocol
-        # For now, placeholder
-      end
-
-      def self.clear
-        system('clear')
-      end
-    end
-
     # w3mimgdisplay Protocol
     module W3m
       @imgdisplay = '/usr/lib/w3m/w3mimgdisplay'
@@ -192,12 +163,17 @@ module Termpix
         terminfo = `xwininfo -id $(xdotool getactivewindow 2>/dev/null) 2>/dev/null`
         return unless terminfo && !terminfo.empty?
 
-        term_w = terminfo.match(/Width: (\d+)/)[1].to_i
-        term_h = terminfo.match(/Height: (\d+)/)[1].to_i
+        w_match = terminfo.match(/Width: (\d+)/)
+        h_match = terminfo.match(/Height: (\d+)/)
+        return unless w_match && h_match
+        term_w = w_match[1].to_i
+        term_h = h_match[1].to_i
 
         # Calculate character dimensions
         cols = `tput cols`.to_i
+        cols = 80 if cols <= 0
         lines = `tput lines`.to_i
+        lines = 24 if lines <= 0
         char_w = term_w / cols
         char_h = term_h / lines
 
@@ -230,8 +206,8 @@ module Termpix
           display_path = image_path
         end
 
-        dimensions = `identify -format "%wx%h" #{Shellwords.escape(display_path)} 2>/dev/null`.strip
-        return if dimensions.empty?
+        dimensions = `identify -format "%wx%h" #{Shellwords.escape(display_path)}[0] 2>/dev/null`.strip
+        return if dimensions.empty? || !dimensions.match?(/\A\d+x\d+\z/)
 
         img_w, img_h = dimensions.split('x').map(&:to_i)
 
@@ -245,9 +221,8 @@ module Termpix
         end
 
         # Display using w3mimgdisplay protocol
-        `echo '0;1;#{img_x};#{img_y};#{img_w};#{img_h};;;;;#{display_path}
-4;
-3;' | #{@imgdisplay} 2>/dev/null`
+        cmd = "0;1;#{img_x};#{img_y};#{img_w};#{img_h};;;;;#{display_path}\n4;\n3;\n"
+        IO.popen([@imgdisplay], 'w', err: '/dev/null') { |io| io.write(cmd) }
 
         # Don't delete temp file - keep it cached for performance
       end
@@ -257,8 +232,11 @@ module Termpix
         terminfo = `xwininfo -id $(xdotool getactivewindow 2>/dev/null) 2>/dev/null`
         return true unless terminfo && !terminfo.empty?
 
-        term_w = terminfo.match(/Width: (\d+)/)[1].to_i
-        term_h = terminfo.match(/Height: (\d+)/)[1].to_i
+        w_match = terminfo.match(/Width: (\d+)/)
+        h_match = terminfo.match(/Height: (\d+)/)
+        return true unless w_match && h_match
+        term_w = w_match[1].to_i
+        term_h = h_match[1].to_i
 
         # Calculate character dimensions
         char_w = term_w / term_width
@@ -271,7 +249,8 @@ module Termpix
         img_max_h = char_h * height + 2
 
         # Use w3mimgdisplay command "6" to clear just the image area
-        `echo "6;#{img_x};#{img_y};#{img_max_w};#{img_max_h};\n4;\n3;" | #{@imgdisplay} 2>/dev/null`
+        cmd = "6;#{img_x};#{img_y};#{img_max_w};#{img_max_h};\n4;\n3;\n"
+        IO.popen([@imgdisplay], 'w', err: '/dev/null') { |io| io.write(cmd) }
         true
       end
     end
