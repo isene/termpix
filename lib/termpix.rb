@@ -31,11 +31,10 @@ module Termpix
         return false
       end
 
-      @current_image = image_path
       true
     end
 
-    # Clear the currently displayed image
+    # Clear all displayed images
     def clear(x: 0, y: 0, width: 80, height: 24, term_width: 80, term_height: 24)
       return false unless @protocol
 
@@ -48,7 +47,6 @@ module Termpix
         Protocols::W3m.clear(x: x, y: y, width: width, height: height, term_width: term_width, term_height: term_height)
       end
 
-      @current_image = nil
       true
     end
 

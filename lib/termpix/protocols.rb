@@ -7,7 +7,7 @@ module Termpix
     # Uses Unicode placeholder mode (U=1) for curses/TUI compatibility
     # Images are tied to placeholder characters that curses manages as text
     module Kitty
-      @current_image_id = nil
+      @active_image_ids = []
       @image_cache = {}  # path -> image_id mapping
 
       def self.display(image_path, x:, y:, max_width:, max_height:)
@@ -32,8 +32,6 @@ module Termpix
           image_id = 1 if image_id == 0
         end
 
-        old_image_id = @current_image_id
-
         unless @image_cache[cache_key]
           # Transmit the image with scaling
           escaped = Shellwords.escape(image_path)
@@ -50,11 +48,8 @@ module Termpix
           chunks.each_with_index do |chunk, idx|
             more = idx < chunks.length - 1 ? 1 : 0
             if idx == 0
-              # First chunk: specify format (f=100 for PNG), action (a=t for transmit)
-              # i=image_id, m=more_chunks
               print "\e_Ga=t,f=100,i=#{image_id},m=#{more};#{chunk}\e\\"
             else
-              # Continuation chunks
               print "\e_Gm=#{more};#{chunk}\e\\"
             end
           end
@@ -63,30 +58,21 @@ module Termpix
           @image_cache[cache_key] = image_id
         end
 
-        # Position cursor and display the NEW image FIRST
-        # a=p (place), i=image_id, C=1 (don't move cursor)
-        # Don't specify c/r - let kitty use image's native size (already scaled by ImageMagick)
-        print "\e[#{y};#{x}H"  # Move cursor to position
+        # Position cursor and place the image (keep existing images)
+        print "\e[#{y};#{x}H"
         print "\e_Ga=p,i=#{image_id},C=1\e\\"
         $stdout.flush
 
-        # NOW delete old placement (after new one is visible) - atomic swap
-        if old_image_id && old_image_id != image_id
-          print "\e_Ga=d,d=i,i=#{old_image_id}\e\\"
-          $stdout.flush
-        end
-
-        @current_image_id = image_id
+        @active_image_ids << image_id unless @active_image_ids.include?(image_id)
         true
       end
 
       def self.clear
-        # Actually clear the image
-        if @current_image_id
-          print "\e_Ga=d,d=i,i=#{@current_image_id}\e\\"
-          $stdout.flush
-          @current_image_id = nil
+        @active_image_ids.each do |id|
+          print "\e_Ga=d,d=i,i=#{id}\e\\"
         end
+        $stdout.flush unless @active_image_ids.empty?
+        @active_image_ids.clear
         true
       end
 
